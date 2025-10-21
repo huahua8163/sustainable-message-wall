@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>永續公益留言牆</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        html {
+            height: 100vh;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .message-card {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .gradient-bg {
+            background: #ffffff;
+        }
+        
+        .message-colors {
+            background: linear-gradient(45deg, #dcfce7 0%, #bbf7d0 100%);
+        }
+        
+        .message-colors-2 {
+            background: linear-gradient(45deg, #ecfdf5 0%, #d1fae5 100%);
+        }
+        
+        .message-colors-3 {
+            background: linear-gradient(45deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+        
+        .message-colors-4 {
+            background: linear-gradient(45deg, #f7fee7 0%, #ecfccb 100%);
+        }
+        
+        .marquee-container {
+            width: 100%;
+            min-height: 180px;
+            height: auto;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 2px solid #22c55e;
+        }
+        
+        .marquee-content {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            animation: marquee 25s linear infinite;
+            gap: 1.5rem;
+        }
+        
+        .marquee-message {
+            flex-shrink: 0;
+            min-width: 280px;
+            max-width: 350px;
+            min-height: 120px;
+            height: auto;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(34, 197, 94, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin-right: 1rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .admin-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+        
+        .admin-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            display: none;
+        }
+        
+        .admin-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow-y: auto;
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+        }
+        
+        .password-form {
+            text-align: center;
+        }
+        
+        /* iframe 優化樣式 */
+        .iframe-optimized {
+            font-size: 14px;
+        }
+        
+        .compact-spacing {
+            padding: 0.75rem;
+        }
+        
+        .compact-margin {
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg iframe-optimized">
+    <!-- 管理者按鈕 -->
+    <div class="admin-toggle">
+        <button onclick="toggleAdminPanel()" 
+                class="bg-green-700 text-white px-3 py-1.5 rounded-lg hover:bg-green-800 transition-colors shadow-lg text-sm">
+            🔧 管理
+        </button>
+    </div>
+
+    <!-- 管理者控制面板 (後台) -->
+    <div id="adminPanel" class="admin-panel">
+        <div class="admin-content">
+            <!-- 密碼驗證表單 -->
+            <div id="passwordForm" class="password-form">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">🔐 管理者登入</h2>
+                <div class="max-w-sm mx-auto">
+                    <div class="mb-3">
+                        <label for="adminPassword" class="block text-sm font-medium text-gray-700 mb-1">請輸入管理者密碼</label>
+                        <input type="password" id="adminPassword" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                               placeholder="輸入密碼...">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="verifyPassword()" 
+                                class="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg hover:bg-green-600 transition-colors text-sm">
+                            🔓 登入
+                        </button>
+                        <button onclick="toggleAdminPanel()" 
+                                class="flex-1 bg-gray-500 text-white py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors text-sm">
+                            ✕ 取消
+                        </button>
+                    </div>
+                    <div id="passwordError" class="text-red-500 text-xs mt-2 hidden">密碼錯誤，請重新輸入</div>
+                </div>
+            </div>
+            
+            <!-- 審核面板 (登入後顯示) -->
+            <div id="adminContent" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">🔧 管理者審核面板</h2>
+                    <button onclick="logout()" 
+                            class="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors text-sm">
+                        🚪 登出
+                    </button>
+                </div>
+                <div id="pendingMessages" class="space-y-2">
+                    <p class="text-gray-500 text-center text-sm">目前沒有待審核的留言</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="min-h-screen p-3">
+        <!-- 跑馬燈留言牆 (上方) -->
+        <div class="max-w-full mx-auto mb-6">
+            <h2 class="text-2xl font-bold text-green-800 text-center mb-4 floating">🌿 永續理念分享牆 🌱</h2>
+            <div class="marquee-container">
+                <div id="marqueeContent" class="marquee-content">
+                    <!-- 範例留言 -->
+                    <div class="marquee-message message-colors">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">🌱</div>
+                            <span class="ml-2 font-bold text-gray-800">環保小尖兵</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">從今天開始減塑生活，每個小行動都能為地球帶來改變 🌍</p>
+                        <div class="text-xs text-gray-600 mt-1">剛剛</div>
+                    </div>
+                    
+                    <div class="marquee-message message-colors-2">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">♻️</div>
+                            <span class="ml-2 font-bold text-gray-800">回收達人</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">垃圾分類做得好，資源回收沒煩惱！一起為循環經濟努力 ♻️</p>
+                        <div class="text-xs text-gray-600 mt-1">5分鐘前</div>
+                    </div>
+                    
+                    <div class="marquee-message message-colors-3">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">🌳</div>
+                            <span class="ml-2 font-bold text-gray-800">綠色守護者</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">種下一棵樹，就是為未來種下希望。讓我們一起綠化地球 🌳</p>
+                        <div class="text-xs text-gray-600 mt-1">10分鐘前</div>
+                    </div>
+                    
+                    <div class="marquee-message message-colors-4">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">☀️</div>
+                            <span class="ml-2 font-bold text-gray-800">太陽能推廣員</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">再生能源是未來趨勢，讓我們擁抱清潔能源，減少碳足跡 ☀️</p>
+                        <div class="text-xs text-gray-600 mt-1">15分鐘前</div>
+                    </div>
+                    
+                    <div class="marquee-message message-colors">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">🌊</div>
+                            <span class="ml-2 font-bold text-gray-800">海洋保護者</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">保護海洋生態，從拒絕一次性塑膠開始。海洋需要我們的守護 🐋</p>
+                        <div class="text-xs text-gray-600 mt-1">20分鐘前</div>
+                    </div>
+                    
+                    <div class="marquee-message message-colors-2">
+                        <div class="flex items-center mb-2">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">🐝</div>
+                            <span class="ml-2 font-bold text-gray-800">生態愛好者</span>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">保護蜜蜂就是保護我們的食物鏈，生物多樣性需要大家一起維護 🌺</p>
+                        <div class="text-xs text-gray-600 mt-1">25分鐘前</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 標題區域 -->
+        <header class="text-center mb-4">
+            <h1 class="text-3xl font-bold text-green-800 mb-1 floating">🌱 永續公益留言牆 🌍</h1>
+            <p class="text-green-600">分享你的環保理念，讓地球更美好 ♻️</p>
+        </header>
+
+        <!-- 留言表單 (下方) -->
+        <div class="max-w-md mx-auto bg-green-50 backdrop-blur-sm rounded-xl p-4 shadow-xl border border-green-200">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3 text-center">🌿 分享你的永續理念</h2>
+            <form id="messageForm" class="space-y-3">
+                <div>
+                    <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">暱稱</label>
+                    <input type="text" id="userName" name="userName" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                           placeholder="請輸入你的暱稱">
+                </div>
+                <div>
+                    <label for="messageText" class="block text-sm font-medium text-gray-700 mb-1">環保理念分享</label>
+                    <textarea id="messageText" name="messageText" required rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
+                              placeholder="分享你的環保想法或永續行動..."></textarea>
+                </div>
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-medium text-sm">
+                    🌱 分享理念
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let pendingMessages = [];
+        let approvedMessages = [];
+        let messageId = 1;
+
+        const messageForm = document.getElementById('messageForm');
+        const pendingContainer = document.getElementById('pendingMessages');
+        const marqueeContent = document.getElementById('marqueeContent');
+
+        // 永續環保主題表情符號陣列
+        const avatars = ['🌱', '🌍', '♻️', '🌿', '🌳', '💚', '🌊', '☀️', '🌾', '🐝', '🌺', '🕊️'];
+        const messageStyles = ['message-colors', 'message-colors-2', 'message-colors-3', 'message-colors-4'];
+
+        // 提交留言表單
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userName = document.getElementById('userName').value.trim();
+            const messageText = document.getElementById('messageText').value.trim();
+            
+            if (userName && messageText) {
+                const newMessage = {
+                    id: messageId++,
+                    userName: userName,
+                    messageText: messageText,
+                    timestamp: new Date(),
+                    avatar: avatars[Math.floor(Math.random() * avatars.length)],
+                    style: messageStyles[Math.floor(Math.random() * messageStyles.length)]
+                };
+                
+                pendingMessages.push(newMessage);
+                updatePendingMessages();
+                
+                // 清空表單
+                messageForm.reset();
+                
+                // 顯示提交成功訊息
+                showNotification('環保理念已提交，等待管理者審核 🌱');
+            }
+        });
+
+        // 更新待審核留言
+        function updatePendingMessages() {
+            if (pendingMessages.length === 0) {
+                pendingContainer.innerHTML = '<p class="text-gray-500 text-center text-sm">目前沒有待審核的留言</p>';
+                return;
+            }
+
+            pendingContainer.innerHTML = pendingMessages.map(message => `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1">
+                                <span class="text-sm">${message.avatar}</span>
+                                <span class="ml-2 font-semibold text-gray-800 text-sm">${message.userName}</span>
+                            </div>
+                            <p class="text-gray-700 text-xs mb-1 break-words">${message.messageText}</p>
+                            <div class="text-xs text-gray-500">${formatTime(message.timestamp)}</div>
+                        </div>
+                        <div class="flex space-x-1 ml-3">
+                            <button onclick="approveMessage(${message.id})" 
+                                    class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 transition-colors">
+                                ✅
+                            </button>
+                            <button onclick="rejectMessage(${message.id})" 
+                                    class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 transition-colors">
+                                ❌
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 通過留言
+        function approveMessage(id) {
+            const messageIndex = pendingMessages.findIndex(msg => msg.id === id);
+            if (messageIndex !== -1) {
+                const approvedMessage = pendingMessages.splice(messageIndex, 1)[0];
+                approvedMessages.unshift(approvedMessage);
+                updatePendingMessages();
+                updateMessageWall();
+                showNotification('環保理念已通過審核並發布 🎉');
+            }
+        }
+
+        // 拒絕留言
+        function rejectMessage(id) {
+            const messageIndex = pendingMessages.findIndex(msg => msg.id === id);
+            if (messageIndex !== -1) {
+                pendingMessages.splice(messageIndex, 1);
+                updatePendingMessages();
+                showNotification('留言已被拒絕 ⚠️');
+            }
+        }
+
+        // 更新跑馬燈留言牆
+        function updateMessageWall() {
+            const marqueeContent = document.getElementById('marqueeContent');
+            const existingMessages = marqueeContent.innerHTML;
+            
+            const newMessages = approvedMessages.map(message => `
+                <div class="marquee-message ${message.style}">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-lg">${message.avatar}</div>
+                        <span class="ml-2 font-bold text-gray-800">${message.userName}</span>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed flex-1 break-words text-sm">${message.messageText}</p>
+                    <div class="text-xs text-gray-600 mt-1">${formatTime(message.timestamp)}</div>
+                </div>
+            `).join('');
+            
+            // 將新留言加到跑馬燈前面
+            marqueeContent.innerHTML = newMessages + existingMessages;
+            
+            // 重新啟動動畫
+            marqueeContent.style.animation = 'none';
+            marqueeContent.offsetHeight; // 觸發重排
+            marqueeContent.style.animation = 'marquee 25s linear infinite';
+        }
+
+        // 切換管理面板
+        function toggleAdminPanel() {
+            const adminPanel = document.getElementById('adminPanel');
+            const passwordForm = document.getElementById('passwordForm');
+            const adminContent = document.getElementById('adminContent');
+            const passwordInput = document.getElementById('adminPassword');
+            const passwordError = document.getElementById('passwordError');
+            
+            if (adminPanel.style.display === 'none' || adminPanel.style.display === '') {
+                adminPanel.style.display = 'block';
+                // 重置表單狀態
+                passwordForm.style.display = 'block';
+                adminContent.classList.add('hidden');
+                passwordInput.value = '';
+                passwordError.classList.add('hidden');
+            } else {
+                adminPanel.style.display = 'none';
+            }
+        }
+
+        // 驗證密碼
+        function verifyPassword() {
+            const passwordInput = document.getElementById('adminPassword');
+            const passwordError = document.getElementById('passwordError');
+            const passwordForm = document.getElementById('passwordForm');
+            const adminContent = document.getElementById('adminContent');
+            
+            const correctPassword = 'hanahr23928467hr';
+            
+            if (passwordInput.value === correctPassword) {
+                passwordForm.style.display = 'none';
+                adminContent.classList.remove('hidden');
+                passwordError.classList.add('hidden');
+                showNotification('登入成功！歡迎進入管理後台 🎉');
+            } else {
+                passwordError.classList.remove('hidden');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        }
+
+        // 登出
+        function logout() {
+            const passwordForm = document.getElementById('passwordForm');
+            const adminContent = document.getElementById('adminContent');
+            const adminPanel = document.getElementById('adminPanel');
+            
+            passwordForm.style.display = 'block';
+            adminContent.classList.add('hidden');
+            adminPanel.style.display = 'none';
+            showNotification('已安全登出管理後台 👋');
+        }
+
+        // 按 Enter 鍵登入
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('adminPassword');
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+        });
+
+        // 格式化時間
+        function formatTime(timestamp) {
+            const now = new Date();
+            const diff = Math.floor((now - timestamp) / 1000);
+            
+            if (diff < 60) return '剛剛';
+            if (diff < 3600) return `${Math.floor(diff / 60)}分鐘前`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}小時前`;
+            return `${Math.floor(diff / 86400)}天前`;
+        }
+
+        // 顯示通知
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-white border-l-4 border-green-500 p-3 rounded-lg shadow-lg z-50 max-w-xs';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <span class="text-green-500 mr-2">🌱</span>
+                    <span class="text-gray-800 text-sm">${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'991f10dc71354a93',t:'MTc2MTAzMTk5Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
